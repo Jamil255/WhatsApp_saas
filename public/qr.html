@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WhatsApp QR Scanner</title>
+  <style>
+    body { font-family: Arial; text-align: center; background: #1a1a2e; color: #fff; padding: 40px; }
+    #qr { max-width: 300px; border: 4px solid #3b82f6; border-radius: 12px; margin: 20px auto; display: none; }
+    #status { font-size: 18px; margin: 20px; color: #94a3b8; }
+    #attempt { color: #f59e0b; font-size: 14px; }
+    .connected { color: #22c55e !important; font-size: 24px !important; }
+    button { padding: 12px 30px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 5px; }
+    button:hover { background: #2563eb; }
+    .red { background: #ef4444; }
+    .red:hover { background: #dc2626; }
+    #log { text-align: left; background: #0f172a; padding: 15px; border-radius: 8px; margin: 20px auto; max-width: 600px; font-size: 12px; color: #64748b; max-height: 200px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>📱 WhatsApp QR Code</h1>
+  <p id="status">Click "Connect" to start receiving QR codes</p>
+  <p id="attempt"></p>
+  <img id="qr" />
+  <br><br>
+  <button id="btnConnect">Connect to QR Stream</button>
+  <button id="btnDisconnect" class="red">Disconnect</button>
+  <div id="log"></div>
+
+  <script>
+    var TENANT_ID = 'd521e1f4-5017-4d9a-8bbb-5654018cbb8a';
+    var es = null;
+
+    function log(msg) {
+      var el = document.getElementById('log');
+      el.innerHTML += new Date().toLocaleTimeString() + ' — ' + msg + '<br>';
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function handleEvent(e) {
+      log('Event type: ' + e.type + ' | data length: ' + (e.data ? e.data.length : 0));
+      try {
+        var raw = JSON.parse(e.data);
+        var event = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+        var eventName = event.event || e.type;
+        var eventData = event.data || event;
+
+        log('Parsed event: ' + eventName);
+
+        if (eventName === 'qr_update' && eventData.qrCode) {
+          document.getElementById('qr').src = eventData.qrCode;
+          document.getElementById('qr').style.display = 'block';
+          document.getElementById('status').textContent = '📷 Scan this QR with WhatsApp!';
+          document.getElementById('attempt').textContent = 'Attempt ' + eventData.attempt + ' / ' + eventData.maxAttempts;
+        }
+        else if (eventName === 'otp_required') {
+          document.getElementById('qr').style.display = 'none';
+          document.getElementById('status').textContent = '✅ QR Scanned! OTP sent to WhatsApp. Verify in Swagger.';
+          document.getElementById('status').className = 'connected';
+          document.getElementById('attempt').textContent = eventData.phoneNumber || '';
+        }
+        else if (eventName === 'verified') {
+          document.getElementById('status').textContent = '🎉 Session Verified & Connected!';
+          document.getElementById('status').className = 'connected';
+        }
+      } catch(err) {
+        log('Parse error: ' + err.message + ' | raw: ' + e.data);
+      }
+    }
+
+    document.getElementById('btnConnect').addEventListener('click', function() {
+      if (es) es.close();
+      document.getElementById('status').textContent = 'Connecting...';
+      document.getElementById('status').className = '';
+      document.getElementById('log').innerHTML = '';
+
+      var url = '/api/qr/stream?tenantId=' + TENANT_ID;
+      log('Connecting to: ' + url);
+      es = new EventSource(url);
+
+      es.onopen = function() {
+        log('SSE connection opened');
+        document.getElementById('status').textContent = '⏳ Waiting for QR code... (Call POST /api/sessions/connect in Swagger)';
+      };
+
+      // Listen for ALL event types
+      es.onmessage = function(e) { handleEvent(e); };
+      es.addEventListener('qr_update', handleEvent);
+      es.addEventListener('otp_required', handleEvent);
+      es.addEventListener('verified', handleEvent);
+      es.addEventListener('qr_expired', handleEvent);
+      es.addEventListener('connected', handleEvent);
+      es.addEventListener('error_event', handleEvent);
+
+      es.onerror = function(e) {
+        log('SSE error — readyState: ' + es.readyState);
+        if (es.readyState === EventSource.CLOSED) {
+          document.getElementById('status').textContent = '⚠️ Connection closed. Click Connect again.';
+        }
+      };
+    });
+
+    document.getElementById('btnDisconnect').addEventListener('click', function() {
+      if (es) { es.close(); es = null; }
+      document.getElementById('status').textContent = 'Disconnected';
+      document.getElementById('status').className = '';
+      document.getElementById('qr').style.display = 'none';
+      document.getElementById('attempt').textContent = '';
+      log('Disconnected');
+    });
+  </script>
+</body>
+</html>
