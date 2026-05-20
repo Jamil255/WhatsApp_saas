@@ -1,25 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { Message } from '../../../database/entities/message.entity';
-import { MessageStatusLog } from '../../../database/entities/message-status-log.entity';
+import { DataSource, Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
 import {
+  MessageDirection,
   MessageStatus,
   MessageType,
-  MessageDirection,
 } from '../../../common/enums';
-import { QueueService } from '../../../shared/queue/queue.service';
-import { normalizeE164 } from '../../../common/utils/phone.util';
 import { generateOtp } from '../../../common/utils/crypto.util';
-import { chunkArray } from '../../../common/utils/chunk.util';
+import { normalizeE164 } from '../../../common/utils/phone.util';
+import { MessageStatusLog } from '../../../database/entities/message-status-log.entity';
+import { Message } from '../../../database/entities/message.entity';
+import { QueueService } from '../../../shared/queue/queue.service';
 import {
+  SendBulkDto,
+  SendMediaDto,
   SendMessageDto,
   SendOtpDto,
-  SendMediaDto,
   SendTemplateMessageDto,
-  SendBulkDto,
 } from './dto/send-message.dto';
-import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class MessageService {

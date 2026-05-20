@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: whatsapp_saas_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1122
+      POSTGRES_DB: whatsapp_saas
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: whatsapp_saas_app
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: 1122
+      DB_DATABASE: whatsapp_saas
+      DB_SYNCHRONIZE: 'false'
+      DB_LOGGING: 'false'
+      JWT_SECRET: 00398590ad0e4cc17e6db3d40269d78c5668b375484217c4300e35cc86f0e6e3
+      JWT_REFRESH_SECRET: 02a45f5a5e4de49ccbe0ee89cf72a775b14b911f53ab7b5d418e40b94d7dd3f4
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
