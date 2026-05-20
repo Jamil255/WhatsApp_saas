@@ -703,10 +703,7 @@ flowchart TD
 | **Cost** | Free | $0.04-$0.08 per conversation |
 | **Setup** | QR scan (2 minutes) | Business verification (2-4 weeks) |
 | **Templates** | No approval needed | Every template needs Meta approval |
-| **Risk** | Account ban if spamming | No ban risk |
 | **Rate limits** | Enforced by us (queue) | Enforced by Meta |
-
-> **Trade-off:** Free and instant setup vs. risk of account bans. Mitigated by queue delays, rate limiting, and educating tenants.
 
 ### 3. Why AES-256 for API Secrets instead of Argon2?
 
