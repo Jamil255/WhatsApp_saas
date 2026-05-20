@@ -1,4 +1,4 @@
-# WhatsApp SaaS Platform — System Architecture & Flowcharts (Part 1)
+# WhatsApp SaaS Platform — System Architecture & Flowcharts
 
 ## SECTION 1 — High-Level Architecture
 
