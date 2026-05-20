@@ -824,8 +824,6 @@ flowchart TD
 | Layer | What It Protects | How |
 |-------|-----------------|-----|
 | **RateLimitGuard** | API endpoint abuse | Per-tenant request count per minute |
-| **Bulk delay** | WhatsApp ban prevention | `sleep(batchDelay)` between messages |
-| **OTP rate limit** | OTP spam prevention | Max 3 OTPs per phone per 10 minutes |
 | **Webhook auto-disable** | Infinite retry loops | Disable after 10 consecutive failures |
 | **QR max attempts** | Resource exhaustion | Max 5 QR codes per connect attempt |
 | **Reconnect max retries** | CPU/memory exhaustion | Max 10 reconnect attempts |
