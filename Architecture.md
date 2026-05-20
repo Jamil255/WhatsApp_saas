@@ -692,9 +692,6 @@ flowchart TD
 | **Throughput** | ~1,000 jobs/sec | ~10,000 jobs/sec | ~5,000 jobs/sec |
 | **Complexity** | Low | Medium | High |
 
-> **Why this design?** For a WhatsApp SaaS, throughput of 1,000 msgs/sec is MORE than enough (WhatsApp bans above ~50 msgs/min anyway). Using pg-boss means zero extra infrastructure and atomic transactions with our message table.
-
-> **When to switch?** If you scale beyond 50+ concurrent tenants each sending 1,000+ messages simultaneously, migrate to Redis + Bull.
 
 ### 2. Why Baileys instead of Meta Official API?
 
@@ -713,8 +710,6 @@ flowchart TD
 | **View API keys** | ✅ Possible after OTP | ❌ Impossible |
 | **Security at rest** | ✅ Encrypted | ✅ Hashed |
 | **Key dependency** | ⚠️ ENCRYPTION_KEY env var | None |
-
-> **Trade-off:** We chose AES so tenants can VIEW their keys via OTP verification. If ENCRYPTION_KEY is lost, ALL API secrets become irrecoverable. Must be stored in a secure vault (AWS Secrets Manager / HashiCorp Vault).
 
 ### 4. Why Store Baileys Auth in PostgreSQL instead of Files?
 
