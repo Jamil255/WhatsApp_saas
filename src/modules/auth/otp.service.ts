@@ -1,6 +1,11 @@
 import {
-  Injectable, Logger, UnauthorizedException, BadRequestException,
-  ServiceUnavailableException, HttpException, HttpStatus,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  BadRequestException,
+  ServiceUnavailableException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
@@ -28,7 +33,7 @@ export class OtpService {
     private readonly tokenService: TokenService,
     private readonly sessionManager: SessionManagerService,
     private readonly config: ConfigService,
-  ) { }
+  ) {}
 
   /**
    * Request OTP — generates OTP, sends via WhatsApp, stores hash in DB
@@ -46,7 +51,9 @@ export class OtpService {
     });
 
     if (!user) {
-      throw new BadRequestException('No active account found with this phone number.');
+      throw new BadRequestException(
+        'No active account found with this phone number.',
+      );
     }
 
     if (user.tenant?.status !== 'active' && user.role !== 'super_admin') {
@@ -60,13 +67,17 @@ export class OtpService {
     });
 
     if (!systemTenant) {
-      throw new ServiceUnavailableException('System tenant not found. Cannot send OTP.');
+      throw new ServiceUnavailableException(
+        'System tenant not found. Cannot send OTP.',
+      );
     }
 
     const systemTenantId = systemTenant.id;
     const sock = this.sessionManager.get(systemTenantId);
     if (!sock) {
-      throw new ServiceUnavailableException('System WhatsApp is not connected. Please try again later.');
+      throw new ServiceUnavailableException(
+        'System WhatsApp is not connected. Please try again later.',
+      );
     }
 
     // 4. Generate OTP
@@ -102,7 +113,9 @@ export class OtpService {
       this.logger.log(`OTP sent to ${normalized} via WhatsApp`);
     } catch (error) {
       this.logger.error(`Failed to send OTP to ${normalized}`, error.message);
-      throw new ServiceUnavailableException('Failed to send OTP via WhatsApp. Please try again.');
+      throw new ServiceUnavailableException(
+        'Failed to send OTP via WhatsApp. Please try again.',
+      );
     }
 
     return {
@@ -166,16 +179,22 @@ export class OtpService {
     });
 
     if (!otpRecord) {
-      throw new UnauthorizedException('OTP expired or not found. Please request a new one.');
+      throw new UnauthorizedException(
+        'OTP expired or not found. Please request a new one.',
+      );
     }
 
     if (otpRecord.attempts >= otpRecord.maxAttempts) {
-      throw new UnauthorizedException('Too many incorrect attempts. Please request a new OTP.');
+      throw new UnauthorizedException(
+        'Too many incorrect attempts. Please request a new OTP.',
+      );
     }
 
     const otpHash = this.hashOtp(otp);
     if (otpHash !== otpRecord.otpHash) {
-      await this.otpRepo.update(otpRecord.id, { attempts: otpRecord.attempts + 1 });
+      await this.otpRepo.update(otpRecord.id, {
+        attempts: otpRecord.attempts + 1,
+      });
       const remaining = otpRecord.maxAttempts - otpRecord.attempts - 1;
       throw new UnauthorizedException(
         `Invalid OTP. ${remaining > 0 ? `${remaining} attempt(s) remaining.` : 'Please request a new OTP.'}`,
