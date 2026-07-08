@@ -9,6 +9,7 @@ import { Observable, map } from 'rxjs';
 @Injectable()
 export class ResponseTransformInterceptor<T> implements NestInterceptor<T> {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const now = Date.now();
     // Skip transformation for SSE (Server-Sent Events) connections
     const request = context.switchToHttp().getRequest();
     const acceptHeader = request?.headers?.accept || '';
@@ -32,6 +33,7 @@ export class ResponseTransformInterceptor<T> implements NestInterceptor<T> {
           data,
           meta: {
             timestamp: new Date().toISOString(),
+            processingTimeMs: Date.now() - now,
           },
         };
       }),

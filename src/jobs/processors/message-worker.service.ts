@@ -117,7 +117,7 @@ export class MessageWorkerService implements OnModuleInit {
           let body = message.body || '';
           if (message.templateId) {
             const tpl = await this.templateRepo.findOne({
-              where: { id: message.templateId },
+              where: { id: message.templateId, tenantId },
             });
             if (tpl && message.templateVariables) {
               body = tpl.body;
