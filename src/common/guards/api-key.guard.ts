@@ -46,14 +46,22 @@ export class ApiKeyGuard implements CanActivate {
     try {
       const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
       if (!encryptionKey) {
-        throw new InternalServerErrorException('ENCRYPTION_KEY is not configured.');
+        throw new InternalServerErrorException(
+          'ENCRYPTION_KEY is not configured.',
+        );
       }
-      const decryptedSecret = decryptAES(credential.apiSecretHash, encryptionKey);
+      const decryptedSecret = decryptAES(
+        credential.apiSecretHash,
+        encryptionKey,
+      );
       if (decryptedSecret !== apiSecret) {
         throw new UnauthorizedException('Invalid API secret.');
       }
     } catch (error) {
-      if (error instanceof UnauthorizedException || error instanceof InternalServerErrorException) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof InternalServerErrorException
+      ) {
         throw error;
       }
       throw new UnauthorizedException('Invalid API secret.');

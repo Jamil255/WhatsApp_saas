@@ -8,7 +8,12 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import express from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuditService } from '../admin/audit.service';
@@ -26,7 +31,7 @@ export class AuthController {
     private readonly otpService: OtpService,
     private readonly apiKeyService: ApiKeyService,
     private readonly auditService: AuditService,
-  ) { }
+  ) {}
 
   @Post('api-keys/rotate')
   @UseGuards(JwtAuthGuard)
@@ -66,10 +71,16 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Request OTP to View API Keys', description: 'Sends an OTP to your phone number.' })
+  @ApiOperation({
+    summary: 'Request OTP to View API Keys',
+    description: 'Sends an OTP to your phone number.',
+  })
   async requestViewOtp(@Req() req: express.Request) {
     const phoneNumber = (req as any).user?.phoneNumber;
-    if (!phoneNumber) throw new UnauthorizedException('No phone number attached to this user account');
+    if (!phoneNumber)
+      throw new UnauthorizedException(
+        'No phone number attached to this user account',
+      );
 
     await this.auditService.log({
       userId: (req as any).user?.sub,
@@ -87,7 +98,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify OTP and View API Keys', description: 'Enter the OTP to reveal your decrypted API secret.' })
+  @ApiOperation({
+    summary: 'Verify OTP and View API Keys',
+    description: 'Enter the OTP to reveal your decrypted API secret.',
+  })
   async verifyViewOtp(@Body() dto: VerifyOtpDto, @Req() req: express.Request) {
     const tenantId = (req as any).user?.tenantId;
 
@@ -95,7 +109,9 @@ export class AuthController {
     await (this.otpService as any).verifyOtpAction(dto.phoneNumber, dto.otp);
     const credentials = await this.apiKeyService.getDecryptedSecret(tenantId);
     if (!credentials) {
-      throw new UnauthorizedException('No active API keys found for this tenant.');
+      throw new UnauthorizedException(
+        'No active API keys found for this tenant.',
+      );
     }
 
     await this.auditService.log({
@@ -108,7 +124,8 @@ export class AuthController {
     });
 
     return {
-      message: 'API Secret decrypted successfully. Do not share this with anyone.',
+      message:
+        'API Secret decrypted successfully. Do not share this with anyone.',
       data: credentials,
     };
   }

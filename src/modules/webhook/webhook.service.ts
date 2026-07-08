@@ -20,7 +20,7 @@ export class WebhookService {
     @InjectRepository(WebhookDeliveryLog)
     private readonly logRepo: Repository<WebhookDeliveryLog>,
     private readonly queueService: QueueService,
-  ) { }
+  ) {}
 
   async register(
     tenantId: string,
@@ -73,7 +73,6 @@ export class WebhookService {
       data,
     });
   }
-
 
   async executeDispatch(
     webhookId: string,

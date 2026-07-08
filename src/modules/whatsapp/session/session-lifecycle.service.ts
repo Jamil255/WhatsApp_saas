@@ -331,8 +331,8 @@ export class SessionLifecycleService {
       {
         status: SessionStatus.DESTROYED,
         creds: null as any,
-        phoneNumber: null as any,
-        connectedAt: null as any,
+        phoneNumber: null,
+        connectedAt: null,
         accountInfo: null as any,
         reconnectCount: 0,
         disconnectedAt: new Date(),

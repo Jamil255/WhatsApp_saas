@@ -185,10 +185,12 @@ export class MessageWorkerService implements OnModuleInit {
     } = data;
     const chunks = chunkArray(recipients, 50);
 
+    let globalIndex = 0;
     for (const chunk of chunks) {
       for (let i = 0; i < chunk.length; i++) {
         const recipient = chunk[i];
-        const vars = Array.isArray(variables) ? variables[i] : variables;
+        const vars = Array.isArray(variables) ? variables[globalIndex] : variables;
+        globalIndex++;
 
         const message = await this.messageRepo.save({
           tenantId,
