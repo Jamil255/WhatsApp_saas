@@ -9,6 +9,7 @@ export class ApiResponseDto<T> {
   meta?: {
     requestId?: string;
     timestamp: string;
+    processingTimeMs?: number;
     pagination?: {
       page: number;
       limit: number;
