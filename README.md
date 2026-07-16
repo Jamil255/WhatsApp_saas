@@ -435,7 +435,7 @@ git clone <repository-url>
 cd message_platform
 
 # 2. Install dependencies
-npm install
+bun install
 
 # 3. Create .env file
 cp .env.example .env
@@ -450,7 +450,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 # CREATE DATABASE whatsapp_saas;
 
 # 6. Run migrations
-npm run migration:run
+bun run migration:run
 ```
 
 ---
@@ -459,11 +459,11 @@ npm run migration:run
 
 ```bash
 # Development (watch mode with hot reload)
-npm run start:dev
+bun run start:dev
 
 # Production build
-npm run build
-npm run start:prod
+bun run build
+bun run start:prod
 ```
 
 Once running, access:
@@ -478,13 +478,13 @@ The project uses TypeORM migrations for database schema management.
 
 ```bash
 # Run all pending migrations
-npm run migration:run
+bun run migration:run
 
 # Generate a new migration from entity changes
-npm run migration:generate -- src/database/migrations/MigrationName
+bun run migration:generate -- src/database/migrations/MigrationName
 
 # Revert the last migration
-npm run migration:revert
+bun run migration:revert
 ```
 
 
