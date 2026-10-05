@@ -1,6 +1,6 @@
 # 📱 WhatsApp SaaS Platform
 
-A production-grade, multi-tenant WhatsApp messaging platform built with **NestJS**, **TypeORM**, **PostgreSQL**, and **Baileys** (WhatsApp Web reverse-engineered protocol). This platform allows businesses (tenants) to send WhatsApp messages, OTPs, media, and bulk campaigns through a simple REST API — without needing Meta's official Cloud API.
+A production-grade, multi-tenant WhatsApp messaging platform branded as **Nexora**, built with **NestJS**, **TypeORM**, **PostgreSQL**, and **Baileys** (WhatsApp Web reverse-engineered protocol). Nexora lets businesses (tenants) send WhatsApp messages, OTPs, media, and bulk campaigns through a simple REST API.
 
 ---
 
@@ -21,6 +21,7 @@ A production-grade, multi-tenant WhatsApp messaging platform built with **NestJS
 - [Setup & Installation](#setup--installation)
 - [Running the Project](#running-the-project)
 - [Migrations](#migrations)
+- [Nexora product docs](docs/README.md)
 
 ---
 
@@ -432,7 +433,7 @@ OTP_LENGTH=6
 ```bash
 # 1. Clone the repository
 git clone <repository-url>
-cd message_platform
+cd WhatsApp_saas
 
 # 2. Install dependencies
 bun install

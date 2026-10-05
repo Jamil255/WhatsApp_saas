@@ -1,7 +1,7 @@
 {
-  "name": "message_platform",
+  "name": "nexora-platform",
   "version": "0.0.1",
-  "description": "",
+  "description": "Nexora messaging infrastructure for multi-tenant WhatsApp workspaces.",
   "author": "",
   "private": true,
   "license": "UNLICENSED",

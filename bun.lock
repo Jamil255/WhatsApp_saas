@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "message_platform",
+      "name": "nexora-platform",
       "dependencies": {
         "@hapi/boom": "^10.0.1",
         "@nestjs/common": "^11.0.1",

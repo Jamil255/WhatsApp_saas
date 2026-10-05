@@ -1,0 +1,37 @@
+import Link from "next/link";
+import { Activity, ArrowUpRight, Building2, ChevronRight, Database, MessageSquare, MoreHorizontal, Server, ShieldCheck, Users, Wifi } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { MetricCard } from "@/components/metric-card";
+import { MiniBarChart } from "@/components/mini-chart";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusDot } from "@/components/status-dot";
+
+const organizations = [
+  { name: "Acme Inc.", slug: "acme-inc", plan: "Growth", status: "Active", messages: "24,892", phone: "+92 300 123 4567", color: "bg-emerald-100 text-primary" },
+  { name: "Northstar Labs", slug: "northstar-labs", plan: "Scale", status: "Active", messages: "18,421", phone: "+1 415 555 0182", color: "bg-blue-100 text-blue-700" },
+  { name: "Luminate Health", slug: "luminate-health", plan: "Starter", status: "Active", messages: "4,206", phone: "+44 20 7946 0958", color: "bg-violet-100 text-violet-700" },
+  { name: "Cavo Commerce", slug: "cavo-commerce", plan: "Growth", status: "Suspended", messages: "-", phone: "Not connected", color: "bg-orange-100 text-orange-700" },
+];
+
+const services = [
+  { icon: Server, name: "API & workers", detail: "All systems operational" },
+  { icon: Database, name: "PostgreSQL", detail: "Healthy · 32ms" },
+  { icon: Activity, name: "Message queue", detail: "Healthy · 0 pending" },
+  { icon: Wifi, name: "WhatsApp gateway", detail: "42 active sessions" },
+];
+
+export default function AdminDashboardPage() {
+  return (
+    <>
+      <PageHeader eyebrow="Platform control center" title="Good morning, Olivia" description="Here is the health of your Nexora platform today." action={<Link href="/admin/organizations" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-white transition hover:bg-ink/90">Manage organizations <ChevronRight className="h-4 w-4" /></Link>} />
+      <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-violet-200 bg-violet-50/70 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div className="flex items-start gap-3"><div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white"><ShieldCheck className="h-4 w-4" /></div><div><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-bold text-ink">Platform health is excellent</p><StatusDot status="online" label="All systems operational" /></div><p className="mt-1 text-xs text-muted-foreground">99.99% uptime · Last incident 42 days ago · 3 services monitored</p></div></div><Link href="/admin/health" className="inline-flex items-center gap-1.5 pl-12 text-xs font-bold text-violet-700 hover:underline sm:pl-0">View system health <ArrowUpRight className="h-3.5 w-3.5" /></Link></div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><MetricCard title="Organizations" value="48" change="12.4%" icon={Building2} tone="violet" /><MetricCard title="Messages this month" value="1.24M" change="18.2%" icon={MessageSquare} tone="green" /><MetricCard title="Connected sessions" value="42" change="8.7%" icon={Wifi} tone="blue" /><MetricCard title="Active users" value="186" change="6.1%" icon={Users} tone="orange" /></div>
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_.7fr]">
+        <Card><CardHeader className="flex-row items-center justify-between"><div><CardTitle>Platform message volume</CardTitle><p className="mt-1 text-xs text-muted-foreground">Traffic across all organizations</p></div><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-muted-foreground">Last 30 days</span></CardHeader><CardContent><div className="mt-4 flex items-end justify-between"><div><p className="font-display text-3xl font-extrabold tracking-[-.05em] text-ink">1,247,892</p><p className="mt-1 text-xs font-semibold text-emerald-600">+18.2% <span className="font-normal text-muted-foreground">from previous month</span></p></div><div className="flex items-center gap-2 text-[10px] text-slate-400"><span className="h-2 w-2 rounded-full bg-primary" /> Messages sent</div></div><div className="mt-8"><MiniBarChart values={[41, 55, 48, 65, 57, 71, 62, 82, 68, 76, 65, 88, 75, 95, 82, 100, 78, 92, 84, 96, 87, 94, 80, 91, 85, 98, 88, 100, 90, 97]} /><div className="mt-3 flex justify-between text-[10px] text-slate-400"><span>Sep 3</span><span>Sep 10</span><span>Sep 17</span><span>Sep 24</span><span>Oct 2</span></div></div></CardContent></Card>
+        <Card><CardHeader><CardTitle>Service status</CardTitle><p className="mt-1 text-xs text-muted-foreground">Live platform dependencies</p></CardHeader><CardContent className="space-y-3">{services.map(({ icon: Icon, name, detail }) => <div key={name} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-primary"><Icon className="h-4 w-4" /></span><div className="flex-1"><p className="text-xs font-bold text-ink">{name}</p><p className="mt-0.5 text-[10px] text-muted-foreground">{detail}</p></div><span className="h-2 w-2 rounded-full bg-emerald-500" /></div>)}<Link href="/admin/health" className="flex items-center justify-center gap-1 pt-2 text-xs font-bold text-primary">View detailed health <ChevronRight className="h-3.5 w-3.5" /></Link></CardContent></Card>
+      </div>
+      <div className="mt-6"><Card><CardHeader className="flex-row items-center justify-between"><div><CardTitle>Organizations</CardTitle><p className="mt-1 text-xs text-muted-foreground">The latest tenants on your platform</p></div><Link href="/admin/organizations" className="text-xs font-bold text-primary hover:underline">View all</Link></CardHeader><CardContent className="px-0 pb-0"><div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left"><thead><tr className="border-y border-slate-100 text-[10px] uppercase tracking-wider text-slate-400"><th className="px-6 py-3 font-bold">Organization</th><th className="px-4 py-3 font-bold">Plan</th><th className="px-4 py-3 font-bold">WhatsApp</th><th className="px-4 py-3 font-bold">Messages</th><th className="px-4 py-3 font-bold">Status</th><th className="px-6 py-3" /></tr></thead><tbody>{organizations.map((org) => <tr key={org.slug} className="border-b border-slate-100 last:border-0"><td className="px-6 py-4"><div className="flex items-center gap-3"><span className={`flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-bold ${org.color}`}>{org.name.split(" ").map((part) => part[0]).join("")}</span><div><p className="text-xs font-bold text-ink">{org.name}</p><p className="mt-0.5 text-[10px] text-muted-foreground">{org.slug}</p></div></div></td><td className="px-4 py-4 text-xs font-semibold text-ink">{org.plan}</td><td className="px-4 py-4 text-xs text-muted-foreground">{org.phone}</td><td className="px-4 py-4 text-xs font-semibold text-ink">{org.messages}</td><td className="px-4 py-4"><Badge variant={org.status === "Active" ? "success" : "danger"}>{org.status}</Badge></td><td className="px-6 py-4 text-right"><button className="rounded-lg p-2 text-slate-400 hover:bg-slate-50" aria-label={`More actions for ${org.name}`}><MoreHorizontal className="h-4 w-4" /></button></td></tr>)}</tbody></table></div></CardContent></Card></div>
+    </>
+  );
+}
