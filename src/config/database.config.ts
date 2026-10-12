@@ -6,7 +6,7 @@ export default registerAs('database', () => ({
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || '1122',
   database: process.env.DB_DATABASE || 'whatsapp_saas',
-  synchronize: process.env.DB_SYNCHRONIZE === 'false',
+  synchronize: process.env.DB_SYNCHRONIZE === 'true',
   logging: process.env.DB_LOGGING === 'true',
   ssl: process.env.DB_SSL === 'true',
 }));

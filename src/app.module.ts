@@ -7,6 +7,7 @@ import {
   whatsappConfig,
   queueConfig,
   otpConfig,
+  billingConfig,
 } from './config';
 import { DatabaseModule } from './database/database.module';
 import { QueueModule } from './shared/queue/queue.module';
@@ -17,6 +18,8 @@ import { TemplateModule } from './modules/template/template.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { VisitorModule } from './modules/visitor/visitor.module';
 import { JobsModule } from './jobs/jobs.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 
@@ -32,6 +35,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
         whatsappConfig,
         queueConfig,
         otpConfig,
+        billingConfig,
       ],
       envFilePath: ['.env'],
     }),
@@ -48,6 +52,8 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
     WebhookModule,
     MonitoringModule,
     AdminModule,
+    DashboardModule,
+    VisitorModule,
 
     // Background Jobs
     JobsModule,

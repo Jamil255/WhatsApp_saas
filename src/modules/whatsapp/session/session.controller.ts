@@ -44,18 +44,18 @@ export class SessionController {
   @ApiOperation({
     summary: 'Connect WhatsApp',
     description:
-      'Initiate a WhatsApp linked-device session. A QR code will be generated — listen to the QR SSE stream. After scanning, an OTP will be sent to the connected number for verification.',
+    'Initiate a WhatsApp linked-device session. A QR code will be generated and can be read from the authenticated QR state endpoint. After scanning, an OTP will be sent to the connected number for verification.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Connection initiated — listen to /qr/stream for QR code',
+    description: 'Connection initiated — poll /sessions/qr for the QR state',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 409, description: 'Session already connected' })
   async connect(@CurrentTenant() tenantId: string) {
     await this.sessionLifecycle.connect(tenantId);
     return {
-      message: 'Connection initiated. Listen to QR SSE stream for QR codes.',
+      message: 'Connection initiated. Poll the authenticated QR endpoint.',
     };
   }
 
@@ -101,6 +101,12 @@ export class SessionController {
     return this.sessionLifecycle.getStatus(tenantId);
   }
 
+  @Get('qr')
+  @ApiOperation({ summary: 'Get the current authenticated QR connection state' })
+  async getQr(@CurrentTenant() tenantId: string) {
+    return this.sessionLifecycle.getQrCode(tenantId);
+  }
+
   @Post('disconnect')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -119,16 +125,16 @@ export class SessionController {
   @ApiOperation({
     summary: 'Restart session',
     description:
-      'Disconnect existing session and initiate a new connection with fresh QR.',
+    'Disconnect the existing session and initiate a new connection with a fresh QR code.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Session restarted — listen to /qr/stream for new QR',
+    description: 'Session restarted — poll /sessions/qr for the new QR state',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async restart(@CurrentTenant() tenantId: string) {
     await this.sessionLifecycle.disconnect(tenantId);
     await this.sessionLifecycle.connect(tenantId);
-    return { message: 'Session restarted. Listen to QR SSE stream.' };
+    return { message: 'Session restarted. Poll the authenticated QR endpoint.' };
   }
 }

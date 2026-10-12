@@ -53,6 +53,10 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  isAvailable(): boolean {
+    return Boolean(this.boss);
+  }
+
   async onModuleDestroy(): Promise<void> {
     if (this.boss) {
       try {

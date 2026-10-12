@@ -12,3 +12,5 @@ export * from './webhook.entity';
 export * from './webhook-delivery-log.entity';
 export * from './audit-log.entity';
 export * from './otp-verification.entity';
+export * from './visitor.entity';
+export * from './subscription-plan.entity';

@@ -5,6 +5,7 @@ import {
   IsEmail,
   IsInt,
   Min,
+  IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TenantPlan } from '../../../common/enums';
@@ -36,6 +37,11 @@ export class CreateTenantDto {
   @IsEnum(TenantPlan)
   @IsOptional()
   plan?: TenantPlan = TenantPlan.STARTER;
+
+  @ApiPropertyOptional({ description: 'Admin-managed subscription plan UUID' })
+  @IsOptional()
+  @IsUUID()
+  subscriptionPlanId?: string;
 }
 
 export class UpdateTenantDto {

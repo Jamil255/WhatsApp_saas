@@ -19,6 +19,7 @@ import { calculateBackoff } from '../../../common/utils/retry.util';
 import { QueueService } from '../../../shared/queue/queue.service';
 import { generateOtp } from '../../../common/utils/crypto.util';
 import * as QRCode from 'qrcode';
+import { MediaStorageService } from '../messaging/media-storage.service';
 
 @Injectable()
 export class SessionLifecycleService {
@@ -37,6 +38,7 @@ export class SessionLifecycleService {
     private readonly qrEventService: QrEventService,
     private readonly queueService: QueueService,
     private readonly config: ConfigService,
+    private readonly mediaStorage: MediaStorageService,
   ) {}
 
   async connect(tenantId: string): Promise<void> {
@@ -90,13 +92,17 @@ export class SessionLifecycleService {
     // Handle incoming messages
     sock.ev.on('messages.upsert', async (msg: any) => {
       if (msg.type === 'notify') {
-        await this.queueService.enqueue('incoming.message', {
-          tenantId,
-          messages: msg.messages.map((m: any) => ({
+        const messages = await Promise.all(
+          msg.messages.map(async (m: any) => ({
             key: m.key,
             message: m.message,
             messageTimestamp: m.messageTimestamp,
+            storedMedia: await this.mediaStorage.captureIncoming(tenantId, m),
           })),
+        );
+        await this.queueService.enqueue('incoming.message', {
+          tenantId,
+          messages,
         });
       }
     });
@@ -353,6 +359,30 @@ export class SessionLifecycleService {
       reconnectCount: session.reconnectCount,
       lastHeartbeat: session.lastHeartbeatAt,
       isSocketAlive,
+    };
+  }
+
+  async getQrCode(tenantId: string) {
+    const session = await this.getStatus(tenantId);
+    const qrSession = await this.qrSessionRepo.findOne({
+      where: { tenantId },
+      order: { updatedAt: 'DESC' },
+    });
+    const active =
+      qrSession?.status === QrStatus.ACTIVE &&
+      qrSession.qrData &&
+      qrSession.expiresAt &&
+      qrSession.expiresAt > new Date();
+
+    return {
+      ...session,
+      qrStatus: qrSession?.status || 'waiting',
+      qrCode: active
+        ? await QRCode.toDataURL(qrSession!.qrData!, { width: 320, margin: 2 })
+        : null,
+      attempt: qrSession?.attempt || 0,
+      maxAttempts: qrSession?.maxAttempts || 0,
+      expiresAt: qrSession?.expiresAt || null,
     };
   }
 

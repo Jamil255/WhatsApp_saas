@@ -17,6 +17,7 @@ import { QrController } from './qr/qr.controller';
 import { QrEventService } from './qr/qr-event.service';
 import { MessagingController } from './messaging/messaging.controller';
 import { MessageService } from './messaging/message.service';
+import { MediaStorageService } from './messaging/media-storage.service';
 
 @Module({
   imports: [
@@ -39,11 +40,13 @@ import { MessageService } from './messaging/message.service';
     SessionRecoveryService,
     QrEventService,
     MessageService,
+    MediaStorageService,
   ],
   exports: [
     SessionManagerService,
     SessionLifecycleService,
     MessageService,
+    MediaStorageService,
     QrEventService,
   ],
 })

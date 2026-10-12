@@ -1,6 +1,7 @@
 import {
   Injectable,
   ConflictException,
+  BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,15 +10,26 @@ import { Tenant } from '../../database/entities/tenant.entity';
 import { User } from '../../database/entities/user.entity';
 import { PasswordService } from '../auth/password.service';
 import { ApiKeyService, ApiKeyPair } from '../auth/api-key.service';
-import { Role, TenantStatus } from '../../common/enums';
+import {
+  Role,
+  SubscriptionStatus,
+  TenantPlan,
+  TenantStatus,
+} from '../../common/enums';
 import { CreateTenantDto, UpdateTenantDto } from './dto/create-tenant.dto';
 import { randomBytes } from 'crypto';
+import { SubscriptionPlan } from '../../database/entities/subscription-plan.entity';
+import { RefreshToken } from '../../database/entities/refresh-token.entity';
 
 @Injectable()
 export class TenantService {
   constructor(
     @InjectRepository(Tenant) private readonly tenantRepo: Repository<Tenant>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(SubscriptionPlan)
+    private readonly planRepo: Repository<SubscriptionPlan>,
+    @InjectRepository(RefreshToken)
+    private readonly refreshTokenRepo: Repository<RefreshToken>,
     private readonly dataSource: DataSource,
     private readonly passwordService: PasswordService,
     private readonly apiKeyService: ApiKeyService,
@@ -51,13 +63,39 @@ export class TenantService {
 
     let tenant: Tenant;
     let apiKeys: ApiKeyPair;
+    const plan = dto.plan || TenantPlan.STARTER;
+    const limits = {
+      [TenantPlan.STARTER]: { daily: 1_000, perMinute: 60 },
+      [TenantPlan.PROFESSIONAL]: { daily: 10_000, perMinute: 300 },
+      [TenantPlan.ENTERPRISE]: { daily: 100_000, perMinute: 1_000 },
+    }[plan];
+    const subscriptionEndsAt = new Date();
+    subscriptionEndsAt.setUTCMonth(subscriptionEndsAt.getUTCMonth() + 1);
+    const billingPlan = dto.subscriptionPlanId
+      ? await this.planRepo.findOne({
+          where: { id: dto.subscriptionPlanId, isActive: true },
+        })
+      : await this.planRepo.findOne({
+          where: { slug: plan, isActive: true },
+        });
+    if (dto.subscriptionPlanId && !billingPlan) {
+      throw new BadRequestException(
+        'The selected subscription plan does not exist or is archived.',
+      );
+    }
 
     // Transactional provisioning
     await this.dataSource.transaction(async (manager) => {
       tenant = await manager.save(Tenant, {
         companyName: dto.companyName,
         slug,
-        plan: dto.plan,
+        plan,
+        subscriptionPlanId: billingPlan?.id || null,
+        subscriptionStatus: SubscriptionStatus.ACTIVE,
+        subscriptionStartedAt: new Date(),
+        subscriptionEndsAt,
+        dailyMessageLimit: billingPlan?.dailyMessageLimit || limits.daily,
+        rateLimitPerMinute: billingPlan?.rateLimitPerMinute || limits.perMinute,
       });
 
       await manager.save(User, {
@@ -94,7 +132,9 @@ export class TenantService {
   async suspend(id: string): Promise<Tenant> {
     const tenant = await this.findById(id);
     tenant.status = TenantStatus.SUSPENDED;
-    return this.tenantRepo.save(tenant);
+    const saved = await this.tenantRepo.save(tenant);
+    await this.revokeTenantRefreshTokens(id);
+    return saved;
   }
 
   async activate(id: string): Promise<Tenant> {
@@ -104,6 +144,18 @@ export class TenantService {
   }
 
   async softDelete(id: string): Promise<void> {
+    await this.revokeTenantRefreshTokens(id);
     await this.tenantRepo.softDelete(id);
+  }
+
+  private async revokeTenantRefreshTokens(tenantId: string): Promise<void> {
+    await this.refreshTokenRepo
+      .createQueryBuilder()
+      .update(RefreshToken)
+      .set({ isRevoked: true })
+      .where('user_id IN (SELECT id FROM users WHERE tenant_id = :tenantId)', {
+        tenantId,
+      })
+      .execute();
   }
 }
