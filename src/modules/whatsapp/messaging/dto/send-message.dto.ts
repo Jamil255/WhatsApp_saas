@@ -13,6 +13,7 @@ import {
   IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { MessageType } from '../../../../common/enums';
 
 export class SendMessageDto {
@@ -96,15 +97,15 @@ export class SendMediaDto {
     example: 'https://example.com/image.jpg',
     description: 'Public URL of the media file',
   })
-  @IsUrl()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
   mediaUrl: string;
 
   @ApiProperty({
-    enum: ['image', 'video', 'document', 'audio'],
+    enum: ['image', 'video', 'document', 'audio', 'gif', 'sticker'],
     description: 'Type of media being sent',
   })
-  @IsEnum(['image', 'video', 'document', 'audio'] as const)
-  mediaType: 'image' | 'video' | 'document' | 'audio';
+  @IsEnum(['image', 'video', 'document', 'audio', 'gif', 'sticker'] as const)
+  mediaType: 'image' | 'video' | 'document' | 'audio' | 'gif' | 'sticker';
 
   @ApiPropertyOptional({
     example: 'Check this out!',
@@ -121,6 +122,46 @@ export class SendMediaDto {
   @IsOptional()
   @IsString()
   filename?: string;
+}
+
+export class SendUploadedMediaDto {
+  @ApiProperty({
+    example: '+923001234567',
+    description: 'Recipient phone number in E.164 format',
+  })
+  @IsString()
+  @Matches(/^\+[1-9]\d{6,14}$/, {
+    message: 'Phone number must be in E.164 format',
+  })
+  to: string;
+
+  @ApiProperty({
+    enum: ['voice', 'image', 'video', 'document', 'audio', 'gif', 'sticker'],
+  })
+  @IsEnum([
+    'voice',
+    'image',
+    'video',
+    'document',
+    'audio',
+    'gif',
+    'sticker',
+  ] as const)
+  mediaType:
+    'voice' | 'image' | 'video' | 'document' | 'audio' | 'gif' | 'sticker';
+
+  @ApiPropertyOptional({ description: 'Optional media caption' })
+  @IsOptional()
+  @IsString()
+  caption?: string;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 900 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(900)
+  durationSeconds?: number;
 }
 
 export class SendTemplateMessageDto {

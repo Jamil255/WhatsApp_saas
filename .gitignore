@@ -1,8 +1,8 @@
 node_modules
+storage/media/
 .next
 dist
 *.tsbuildinfo
 *.log
 config.bat
-.env
 node_modules

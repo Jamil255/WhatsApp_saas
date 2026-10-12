@@ -5,6 +5,7 @@ import { QueueService } from '../../shared/queue/queue.service';
 import { Message } from '../../database/entities/message.entity';
 import { MessageStatusLog } from '../../database/entities/message-status-log.entity';
 import { Template } from '../../database/entities/template.entity';
+import { Tenant } from '../../database/entities/tenant.entity';
 import {
   MessageStatus,
   MessageType,
@@ -12,9 +13,15 @@ import {
 } from '../../common/enums';
 import { SessionManagerService } from '../../modules/whatsapp/session/session-manager.service';
 import { WebhookService } from '../../modules/webhook/webhook.service';
-import { toWhatsAppJid, fromWhatsAppJid } from '../../common/utils/phone.util';
+import {
+  fromWhatsAppJid,
+  phoneFromWhatsAppMessageKey,
+  toWhatsAppJid,
+} from '../../common/utils/phone.util';
 import { chunkArray } from '../../common/utils/chunk.util';
 import { sleep } from '../../common/utils/retry.util';
+import { getTenantAccessDenial } from '../../common/utils/tenant-access.util';
+import { normalizeMessageContent } from '@whiskeysockets/baileys';
 
 @Injectable()
 export class MessageWorkerService implements OnModuleInit {
@@ -27,6 +34,8 @@ export class MessageWorkerService implements OnModuleInit {
     private readonly statusLogRepo: Repository<MessageStatusLog>,
     @InjectRepository(Template)
     private readonly templateRepo: Repository<Template>,
+    @InjectRepository(Tenant)
+    private readonly tenantRepo: Repository<Tenant>,
     private readonly dataSource: DataSource,
     private readonly queueService: QueueService,
     private readonly sessionManager: SessionManagerService,
@@ -74,6 +83,28 @@ export class MessageWorkerService implements OnModuleInit {
     });
     if (!message || message.status === MessageStatus.SENT) return;
 
+    const denial = await this.getTenantSendDenial(tenantId);
+    if (denial) {
+      await this.messageRepo.update(messageId, {
+        status: MessageStatus.FAILED,
+        failedAt: new Date(),
+        errorReason: denial.message,
+      });
+      await this.updateStatus(
+        messageId,
+        MessageStatus.FAILED,
+        'access_policy',
+        {
+          code: denial.code,
+          error: denial.message,
+        },
+      );
+      this.logger.warn(
+        `Message ${messageId} blocked for tenant ${tenantId}: ${denial.code}`,
+      );
+      return;
+    }
+
     try {
       await this.updateStatus(messageId, MessageStatus.PROCESSING, 'worker');
 
@@ -90,27 +121,69 @@ export class MessageWorkerService implements OnModuleInit {
           break;
         case MessageType.IMAGE:
           result = await sock.sendMessage(jid, {
-            image: { url: message.mediaMetadata?.url },
+            image: {
+              url:
+                message.mediaMetadata?.localPath || message.mediaMetadata?.url,
+            },
             caption: message.body || undefined,
           });
           break;
         case MessageType.VIDEO:
           result = await sock.sendMessage(jid, {
-            video: { url: message.mediaMetadata?.url },
+            video: {
+              url:
+                message.mediaMetadata?.localPath || message.mediaMetadata?.url,
+            },
             caption: message.body || undefined,
           });
           break;
         case MessageType.DOCUMENT:
           result = await sock.sendMessage(jid, {
-            document: { url: message.mediaMetadata?.url },
+            document: {
+              url:
+                message.mediaMetadata?.localPath || message.mediaMetadata?.url,
+            },
             fileName: message.mediaMetadata?.fileName || 'document',
             mimetype: message.mediaMetadata?.mimeType,
           });
           break;
         case MessageType.AUDIO:
           result = await sock.sendMessage(jid, {
-            audio: { url: message.mediaMetadata?.url },
-            mimetype: 'audio/ogg; codecs=opus',
+            audio: {
+              url:
+                message.mediaMetadata?.localPath || message.mediaMetadata?.url,
+            },
+            mimetype:
+              message.mediaMetadata?.mimeType || 'audio/ogg; codecs=opus',
+          });
+          break;
+        case MessageType.VOICE:
+          result = await sock.sendMessage(jid, {
+            audio: {
+              url:
+                message.mediaMetadata?.localPath || message.mediaMetadata?.url,
+            },
+            mimetype:
+              message.mediaMetadata?.mimeType || 'audio/ogg; codecs=opus',
+            ptt: true,
+          });
+          break;
+        case MessageType.GIF:
+          result = await sock.sendMessage(jid, {
+            video: {
+              url:
+                message.mediaMetadata?.localPath || message.mediaMetadata?.url,
+            },
+            caption: message.body || undefined,
+            gifPlayback: true,
+          });
+          break;
+        case MessageType.STICKER:
+          result = await sock.sendMessage(jid, {
+            sticker: {
+              url:
+                message.mediaMetadata?.localPath || message.mediaMetadata?.url,
+            },
           });
           break;
         case MessageType.TEMPLATE:
@@ -183,13 +256,22 @@ export class MessageWorkerService implements OnModuleInit {
       variables,
       batchDelay,
     } = data;
+    const denial = await this.getTenantSendDenial(tenantId);
+    if (denial) {
+      this.logger.warn(
+        `Bulk job ${batchId} blocked for tenant ${tenantId}: ${denial.code}`,
+      );
+      return;
+    }
     const chunks = chunkArray(recipients, 50);
 
     let globalIndex = 0;
     for (const chunk of chunks) {
       for (let i = 0; i < chunk.length; i++) {
         const recipient = chunk[i];
-        const vars = Array.isArray(variables) ? variables[globalIndex] : variables;
+        const vars = Array.isArray(variables)
+          ? variables[globalIndex]
+          : variables;
         globalIndex++;
 
         const message = await this.messageRepo.save({
@@ -267,12 +349,79 @@ export class MessageWorkerService implements OnModuleInit {
     for (const msg of messages) {
       if (msg.key?.fromMe) continue;
 
-      const from = fromWhatsAppJid(msg.key?.remoteJid || '');
+      const from =
+        phoneFromWhatsAppMessageKey(msg.key) ||
+        fromWhatsAppJid(msg.key?.remoteJid || '');
+      const content = normalizeMessageContent(msg.message) || {};
+      let messageType = MessageType.TEXT;
+      let mediaMetadata: Record<
+        string,
+        string | boolean | number | null
+      > | null = msg.storedMedia
+        ? { ...msg.storedMedia, retained: true }
+        : null;
+
+      if (msg.storedMedia) {
+        messageType = msg.storedMedia.mediaType as MessageType;
+      } else if (content.imageMessage) {
+        messageType = MessageType.IMAGE;
+        mediaMetadata = {
+          mimeType: content.imageMessage.mimetype || null,
+          fileName: null,
+          retained: false,
+        };
+      } else if (content.videoMessage) {
+        messageType = content.videoMessage.gifPlayback
+          ? MessageType.GIF
+          : MessageType.VIDEO;
+        mediaMetadata = {
+          mimeType: content.videoMessage.mimetype || null,
+          fileName: null,
+          retained: false,
+          gifPlayback: Boolean(content.videoMessage.gifPlayback),
+        };
+      } else if (content.documentMessage) {
+        messageType = MessageType.DOCUMENT;
+        mediaMetadata = {
+          mimeType: content.documentMessage.mimetype || null,
+          fileName: content.documentMessage.fileName || null,
+          retained: false,
+        };
+      } else if (content.audioMessage) {
+        messageType = content.audioMessage.ptt
+          ? MessageType.VOICE
+          : MessageType.AUDIO;
+        mediaMetadata = {
+          mimeType: content.audioMessage.mimetype || null,
+          fileName: null,
+          retained: false,
+          ptt: Boolean(content.audioMessage.ptt),
+          durationSeconds: Number(content.audioMessage.seconds || 0),
+        };
+      } else if (content.stickerMessage) {
+        messageType = MessageType.STICKER;
+        mediaMetadata = {
+          mimeType: content.stickerMessage.mimetype || 'image/webp',
+          fileName: 'sticker.webp',
+          retained: false,
+        };
+      }
+
       const body =
-        msg.message?.conversation ||
-        msg.message?.extendedTextMessage?.text ||
-        msg.message?.imageMessage?.caption ||
-        '[media]';
+        content.conversation ||
+        content.extendedTextMessage?.text ||
+        content.imageMessage?.caption ||
+        content.videoMessage?.caption ||
+        content.documentMessage?.fileName ||
+        (messageType === MessageType.TEXT
+          ? '[Unsupported message]'
+          : messageType === MessageType.VOICE
+            ? 'Voice message'
+            : messageType === MessageType.GIF
+              ? 'GIF'
+              : messageType === MessageType.STICKER
+                ? 'Sticker'
+                : `${messageType[0].toUpperCase()}${messageType.slice(1)}`);
 
       const message = await this.messageRepo.save({
         tenantId,
@@ -280,7 +429,8 @@ export class MessageWorkerService implements OnModuleInit {
         toNumber: '',
         body,
         direction: MessageDirection.INBOUND,
-        messageType: MessageType.TEXT,
+        messageType,
+        mediaMetadata,
         status: MessageStatus.DELIVERED,
         whatsappMessageId: msg.key?.id,
       } as any);
@@ -289,6 +439,7 @@ export class MessageWorkerService implements OnModuleInit {
         messageId: message.id,
         from,
         body,
+        messageType,
         timestamp: new Date().toISOString(),
       });
     }
@@ -301,5 +452,10 @@ export class MessageWorkerService implements OnModuleInit {
     metadata?: any,
   ): Promise<void> {
     await this.statusLogRepo.save({ messageId, status, source, metadata });
+  }
+
+  private async getTenantSendDenial(tenantId: string) {
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    return getTenantAccessDenial(tenant);
   }
 }

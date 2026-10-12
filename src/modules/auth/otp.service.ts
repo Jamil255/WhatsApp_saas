@@ -18,6 +18,8 @@ import { TokenService } from './token.service';
 import { SessionManagerService } from '../whatsapp/session/session-manager.service';
 import { generateOtp } from '../../common/utils/crypto.util';
 import { normalizeE164, toWhatsAppJid } from '../../common/utils/phone.util';
+import { Role } from '../../common/enums';
+import { getTenantAccessDenial } from '../../common/utils/tenant-access.util';
 
 @Injectable()
 export class OtpService {
@@ -56,8 +58,9 @@ export class OtpService {
       );
     }
 
-    if (user.tenant?.status !== 'active' && user.role !== 'super_admin') {
-      throw new UnauthorizedException('Your account has been suspended.');
+    if (user.role !== Role.SUPER_ADMIN) {
+      const denial = getTenantAccessDenial(user.tenant);
+      if (denial) throw new UnauthorizedException(denial.message);
     }
 
     // 3. Get system tenant's WhatsApp socket
@@ -210,6 +213,11 @@ export class OtpService {
 
     if (!user) {
       throw new UnauthorizedException('User not found or deactivated.');
+    }
+
+    if (user.role !== Role.SUPER_ADMIN) {
+      const denial = getTenantAccessDenial(user.tenant);
+      if (denial) throw new UnauthorizedException(denial.message);
     }
 
     return user;

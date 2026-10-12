@@ -99,3 +99,11 @@ section.section-reveal-ready.section-reveal-visible { opacity: 1; transform: non
 .code-scroll code { overflow-wrap: anywhere; }
 
 .qr-placeholder { background-color: #fff; background-image: linear-gradient(90deg, #102a24 10%, transparent 10%, transparent 20%, #102a24 20%, #102a24 30%, transparent 30%, transparent 40%, #102a24 40%, #102a24 50%, transparent 50%, transparent 60%, #102a24 60%, #102a24 70%, transparent 70%, transparent 80%, #102a24 80%, #102a24 90%, transparent 90%), linear-gradient(#102a24 10%, transparent 10%, transparent 20%, #102a24 20%, #102a24 30%, transparent 30%, transparent 40%, #102a24 40%, #102a24 50%, transparent 50%, transparent 60%, #102a24 60%, #102a24 70%, transparent 70%, transparent 80%, #102a24 80%, #102a24 90%, transparent 90%); background-size: 21px 21px; background-position: 0 0, 7px 7px; }
+
+/* Dashboard surfaces mirror the compact shadcn admin-panel geometry without
+   changing cards used by the public marketing and documentation pages. */
+.dashboard-shell [data-slot="card"] { border-radius: .625rem; box-shadow: 0 1px 2px rgba(15, 23, 42, .045); }
+.dashboard-shell [data-slot="card-title"] { font-family: var(--font-inter), Inter, sans-serif; font-weight: 600; letter-spacing: -.015em; }
+.dashboard-shell [data-slot="card-header"] { padding: 1.25rem; }
+.dashboard-shell [data-slot="card-content"] { padding: 0 1.25rem 1.25rem; }
+.dashboard-shell [data-slot="card-footer"] { padding: 0 1.25rem 1.25rem; }

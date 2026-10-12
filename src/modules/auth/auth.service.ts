@@ -5,6 +5,8 @@ import { User } from '../../database/entities/user.entity';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
 import { LoginDto } from './dto/login.dto';
+import { Role } from '../../common/enums';
+import { getTenantAccessDenial } from '../../common/utils/tenant-access.util';
 
 @Injectable()
 export class AuthService {
@@ -25,16 +27,17 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password.');
     }
 
-    if (user.tenant?.status !== 'active' && user.role !== 'super_admin') {
-      throw new UnauthorizedException('Your account has been suspended.');
-    }
-
     const isPasswordValid = await this.passwordService.verify(
       user.passwordHash,
       dto.password,
     );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password.');
+    }
+
+    if (user.role !== Role.SUPER_ADMIN) {
+      const denial = getTenantAccessDenial(user.tenant);
+      if (denial) throw new UnauthorizedException(denial.message);
     }
 
     const accessToken = this.tokenService.generateAccessToken({
@@ -71,10 +74,19 @@ export class AuthService {
 
     const user = await this.userRepo.findOne({
       where: { id: tokenRecord.userId, isActive: true },
+      relations: ['tenant'],
     });
 
     if (!user) {
       throw new UnauthorizedException('User not found.');
+    }
+
+    if (user.role !== Role.SUPER_ADMIN) {
+      const denial = getTenantAccessDenial(user.tenant);
+      if (denial) {
+        await this.tokenService.revokeRefreshToken(refreshToken);
+        throw new UnauthorizedException(denial.message);
+      }
     }
 
     // Revoke old refresh token

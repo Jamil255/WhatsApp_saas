@@ -25,3 +25,35 @@ export function fromWhatsAppJid(jid: string): string {
   const number = jid.split('@')[0].split(':')[0];
   return `+${number}`;
 }
+
+type WhatsAppMessageKey = {
+  remoteJid?: string | null;
+  remoteJidAlt?: string | null;
+  participant?: string | null;
+  participantAlt?: string | null;
+};
+
+/**
+ * Resolve a real phone number from a Baileys message key.
+ * WhatsApp may use an internal @lid address as remoteJid and expose the
+ * corresponding phone-number JID through remoteJidAlt/participantAlt.
+ */
+export function phoneFromWhatsAppMessageKey(
+  key: WhatsAppMessageKey | null | undefined,
+): string | null {
+  if (!key) return null;
+
+  const candidates = [
+    key.participantAlt,
+    key.remoteJidAlt,
+    key.participant,
+    key.remoteJid,
+  ].filter((jid): jid is string => Boolean(jid));
+
+  const phoneJid = candidates.find(
+    (jid) =>
+      jid.endsWith('@s.whatsapp.net') || jid.endsWith('@hosted'),
+  );
+
+  return phoneJid ? fromWhatsAppJid(phoneJid) : null;
+}

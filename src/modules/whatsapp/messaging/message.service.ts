@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,14 +11,18 @@ import { generateOtp } from '../../../common/utils/crypto.util';
 import { normalizeE164 } from '../../../common/utils/phone.util';
 import { MessageStatusLog } from '../../../database/entities/message-status-log.entity';
 import { Message } from '../../../database/entities/message.entity';
+import { Tenant } from '../../../database/entities/tenant.entity';
 import { QueueService } from '../../../shared/queue/queue.service';
+import { getTenantAccessDenial } from '../../../common/utils/tenant-access.util';
 import {
   SendBulkDto,
   SendMediaDto,
   SendMessageDto,
   SendOtpDto,
   SendTemplateMessageDto,
+  SendUploadedMediaDto,
 } from './dto/send-message.dto';
+import { MediaStorageService } from './media-storage.service';
 
 @Injectable()
 export class MessageService {
@@ -29,8 +33,11 @@ export class MessageService {
     private readonly messageRepo: Repository<Message>,
     @InjectRepository(MessageStatusLog)
     private readonly statusLogRepo: Repository<MessageStatusLog>,
+    @InjectRepository(Tenant)
+    private readonly tenantRepo: Repository<Tenant>,
     private readonly dataSource: DataSource,
     private readonly queueService: QueueService,
+    private readonly mediaStorage: MediaStorageService,
   ) {}
 
   async sendMessage(tenantId: string, dto: SendMessageDto) {
@@ -69,7 +76,39 @@ export class MessageService {
         url: dto.mediaUrl,
         mediaType: dto.mediaType,
         fileName: dto.filename,
+        mimeType:
+          dto.mediaType === 'gif'
+            ? 'video/mp4'
+            : dto.mediaType === 'sticker'
+              ? 'image/webp'
+              : undefined,
+        gifPlayback: dto.mediaType === 'gif',
       },
+    });
+    return this.toResponse(message);
+  }
+
+  async sendUploadedMedia(
+    tenantId: string,
+    dto: SendUploadedMediaDto,
+    file: {
+      buffer: Buffer;
+      mimetype: string;
+      originalname: string;
+      size: number;
+    },
+  ) {
+    const stored = await this.mediaStorage.storeUpload(
+      tenantId,
+      file,
+      dto.mediaType,
+      dto.durationSeconds,
+    );
+    const message = await this.createAndEnqueue(tenantId, {
+      toNumber: normalizeE164(dto.to),
+      body: dto.caption || null,
+      messageType: dto.mediaType as MessageType,
+      mediaMetadata: stored,
     });
     return this.toResponse(message);
   }
@@ -85,6 +124,7 @@ export class MessageService {
   }
 
   async sendBulk(tenantId: string, dto: SendBulkDto) {
+    await this.assertTenantCanSend(tenantId);
     const batchId = `batch_${uuidv4()}`;
     const recipients = [...new Set(dto.recipients)]; // deduplicate
 
@@ -137,6 +177,7 @@ export class MessageService {
     tenantId: string,
     data: Partial<Message>,
   ): Promise<Message> {
+    await this.assertTenantCanSend(tenantId);
     let message: Message;
 
     await this.dataSource.transaction(async (manager) => {
@@ -170,6 +211,20 @@ export class MessageService {
     );
 
     return message!;
+  }
+
+  private async assertTenantCanSend(tenantId: string): Promise<void> {
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    const denial = getTenantAccessDenial(tenant);
+    if (!denial) return;
+
+    throw new HttpException(
+      {
+        success: false,
+        error: denial,
+      },
+      denial.statusCode,
+    );
   }
 
   /**

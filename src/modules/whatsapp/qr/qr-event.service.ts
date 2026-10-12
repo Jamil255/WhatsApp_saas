@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Subject, Observable } from 'rxjs';
-import { filter, map } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 
 export interface QrEvent {
   event: string;

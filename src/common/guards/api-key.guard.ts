@@ -4,12 +4,14 @@ import {
   ExecutionContext,
   UnauthorizedException,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { ApiCredential } from '../../database/entities/api-credential.entity';
 import { decryptAES } from '../utils/crypto.util';
+import { getTenantAccessDenial } from '../utils/tenant-access.util';
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
@@ -67,11 +69,8 @@ export class ApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('Invalid API secret.');
     }
 
-    if (credential.tenant?.status !== 'active') {
-      throw new UnauthorizedException(
-        'Tenant account is suspended or inactive.',
-      );
-    }
+    const denial = getTenantAccessDenial(credential.tenant);
+    if (denial) throw new ForbiddenException(denial.message);
 
     // Attach tenant context to request
     request.tenantId = credential.tenant.id;

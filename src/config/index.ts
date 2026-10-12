@@ -4,3 +4,4 @@ export { default as jwtConfig } from './jwt.config';
 export { default as whatsappConfig } from './whatsapp.config';
 export { default as queueConfig } from './queue.config';
 export { default as otpConfig } from './otp.config';
+export { default as billingConfig } from './billing.config';
